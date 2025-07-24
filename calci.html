@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aesthetic Matrix Calculator</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Courier New', monospace;
+      background-color: #1a1a2e;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #f8f0e3;
+      text-shadow: 0 0 5px #c9184a;
+    }
+
+    .calculator, .matrix {
+      background: #2e2e38;
+      padding: 1.5rem;
+      border-radius: 15px;
+      box-shadow: 0 0 20px #121212;
+      margin: 1rem;
+      width: 90%;
+      max-width: 500px;
+    }
+
+    input, select, button {
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+      font-size: 1rem;
+      background: #27293d;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      width: 100%;
+    }
+
+    button:hover {
+      background: #c9184a;
+      cursor: pointer;
+    }
+
+    .matrix-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+
+    .output {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #1e1e30;
+      border-radius: 10px;
+      color: #a3e635;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧮 Aesthetic Matrix Calculator</h1>
+
+  <div class="calculator">
+    <h2>Basic Calculator</h2>
+    <input type="text" id="calcInput" placeholder="Enter expression (e.g. 5+3*2)" />
+    <button onclick="calculate()">Calculate</button>
+    <div class="output" id="calcOutput"></div>
+  </div>
+
+  <div class="matrix">
+    <h2>Matrix Operations</h2>
+    <label>Matrix A (3x3):</label>
+    <div class="matrix-grid" id="matrixA"></div>
+
+    <label>Matrix B (3x3):</label>
+    <div class="matrix-grid" id="matrixB"></div>
+
+    <select id="matrixOp">
+      <option value="multiply">Multiply A × B</option>
+      <option value="adjoint">Adjoint of A</option>
+      <option value="inverse">Inverse of A</option>
+    </select>
+    <button onclick="performMatrixOp()">Compute</button>
+    <div class="output" id="matrixOutput"></div>
+  </div>
+
+  <script>
+    function calculate() {
+      const input = document.getElementById("calcInput").value;
+      try {
+        const result = eval(input);
+        document.getElementById("calcOutput").innerText = `Result: ${result}`;
+      } catch {
+        document.getElementById("calcOutput").innerText = "Invalid Expression!";
+      }
+    }
+
+    function getMatrixValues(id) {
+      return [...document.querySelectorAll(`#${id} input`)].map(i => parseFloat(i.value) || 0);
+    }
+
+    function displayMatrix(mat) {
+      return mat.map(row => row.join("\t")).join("\n");
+    }
+
+    function matrixMultiply(A, B) {
+      const result = [];
+      for (let i = 0; i < 3; i++) {
+        result[i] = [];
+        for (let j = 0; j < 3; j++) {
+          result[i][j] = 0;
+          for (let k = 0; k < 3; k++) {
+            result[i][j] += A[i][k] * B[k][j];
+          }
+        }
+      }
+      return result;
+    }
+
+    function getAdjoint(A) {
+      const cofactor = (i, j) => {
+        const minor = A.filter((_, x) => x !== i).map(row => row.filter((_, y) => y !== j));
+        return ((i + j) % 2 === 0 ? 1 : -1) * (minor[0][0] * minor[1][1] - minor[0][1] * minor[1][0]);
+      };
+      const adj = [];
+      for (let i = 0; i < 3; i++) {
+        adj[i] = [];
+        for (let j = 0; j < 3; j++) {
+          adj[i][j] = cofactor(j, i); // note the transpose here
+        }
+      }
+      return adj;
+    }
+
+    function getDeterminant(A) {
+      return A[0][0]*(A[1][1]*A[2][2]-A[1][2]*A[2][1])
+           - A[0][1]*(A[1][0]*A[2][2]-A[1][2]*A[2][0])
+           + A[0][2]*(A[1][0]*A[2][1]-A[1][1]*A[2][0]);
+    }
+
+    function getInverse(A) {
+      const det = getDeterminant(A);
+      if (det === 0) return null;
+      const adj = getAdjoint(A);
+      return adj.map(row => row.map(val => (val / det).toFixed(2)));
+    }
+
+    function performMatrixOp() {
+      const Aflat = getMatrixValues("matrixA");
+      const Bflat = getMatrixValues("matrixB");
+      const A = [Aflat.slice(0,3), Aflat.slice(3,6), Aflat.slice(6,9)];
+      const B = [Bflat.slice(0,3), Bflat.slice(3,6), Bflat.slice(6,9)];
+      const op = document.getElementById("matrixOp").value;
+      let result;
+
+      if (op === "multiply") {
+        result = matrixMultiply(A, B);
+      } else if (op === "adjoint") {
+        result = getAdjoint(A);
+      } else if (op === "inverse") {
+        result = getInverse(A);
+        if (!result) {
+          document.getElementById("matrixOutput").innerText = "Matrix A is not invertible.";
+          return;
+        }
+      }
+
+      document.getElementById("matrixOutput").innerText = displayMatrix(result);
+    }
+
+    // Initialize inputs
+    function createMatrixInputs(id) {
+      const container = document.getElementById(id);
+      for (let i = 0; i < 9; i++) {
+        const input = document.createElement("input");
+        input.type = "number";
+        input.value = 0;
+        container.appendChild(input);
+      }
+    }
+
+    createMatrixInputs("matrixA");
+    createMatrixInputs("matrixB");
+  </script>
+</body>
+</html>
